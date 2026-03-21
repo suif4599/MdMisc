@@ -586,7 +586,7 @@ def build_parser_blocks(mappers: str) -> Tuple[List[str], List[str]]:
     # PDF center
     parser_blocks.append(
 r"""
-    const regex = /^@import\s+"(.*\.pdf)"\s*\{(.*?)\}/mg;
+    const regex = /^@import\s+"(.*\.pdf)"\s*(\{.*?\})?/mg;
     markdown = markdown.replace(regex, (match, pdf, argument) => {
       return `
 <div style="display: flex; justify-content: center; flex-wrap: wrap;">
