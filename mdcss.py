@@ -160,6 +160,11 @@ def generate_print_style(
         return "/* No valid content style extracted */"
 
     output_lines = ["@media print {"]
+    output_lines.append("  /* Ensure headings don't force page breaks, but allow content to flow naturally. */")
+    output_lines.append("  h1, h2, h3, h4, h5, h6 {")
+    output_lines.append("    break-after: auto !important;")
+    output_lines.append("    page-break-after: auto !important;")
+    output_lines.append("  }")
     output_lines.append("  /* Auto-generated print style (cssutils based) */")
     output_lines.append("  body {")
     output_lines.append("    background: white !important;")
@@ -233,6 +238,29 @@ def generate_print_style(
     )
     output_lines.append("    display: block !important;")
     output_lines.append("    margin: 0 !important;")
+    output_lines.append("  }")
+    output_lines.append("  /* Final pagination overrides: code can split, callouts should stay intact. */")
+    output_lines.append("  html body h1, html body h2, html body h3, html body h4, html body h5, html body h6,")
+    output_lines.append("  .markdown-preview h1, .markdown-preview h2, .markdown-preview h3,")
+    output_lines.append("  .markdown-preview h4, .markdown-preview h5, .markdown-preview h6 {")
+    output_lines.append("    break-after: auto !important;")
+    output_lines.append("    page-break-after: auto !important;")
+    output_lines.append("  }")
+    output_lines.append("  html body pre, .markdown-preview pre, pre[data-role=\"codeBlock\"],")
+    output_lines.append("  html body pre > code, .markdown-preview pre > code,")
+    output_lines.append("  html body pre.line-numbers, .markdown-preview pre.line-numbers, div:has(> pre) {")
+    output_lines.append("    break-inside: auto !important;")
+    output_lines.append("    page-break-inside: auto !important;")
+    output_lines.append("    break-before: auto !important;")
+    output_lines.append("    page-break-before: auto !important;")
+    output_lines.append("  }")
+    output_lines.append("  html body pre, html body pre[class*=\"language-\"],")
+    output_lines.append("  .markdown-preview pre, .markdown-preview pre[class*=\"language-\"] {")
+    output_lines.append("    overflow: visible !important;")
+    output_lines.append("  }")
+    output_lines.append("  .callout, details.callout {")
+    output_lines.append("    break-inside: avoid !important;")
+    output_lines.append("    page-break-inside: avoid !important;")
     output_lines.append("  }")
     output_lines.append("}")
 
@@ -450,16 +478,6 @@ def build_style_blocks(
 """
                 )
 
-    blocks.append(
-        """
-  * {
-    page-break-inside: avoid !important;
-    page-break-before: avoid !important;
-    page-break-after: avoid !important;
-  }
-"""
-    )
-
     if not enable_parser:
         for i in range(1, 101):
             blocks.append(
@@ -593,7 +611,9 @@ r"""
 
 @import "${pdf}"{${argument}}
 
-</div>`
+</div>
+
+`
     });
 """
     )
@@ -1102,7 +1122,7 @@ def write_output(
         output = "\n" + "\n".join(map(lambda x: x.strip("\n"), parser_blocks)) + "\n"
         output = f"({{{output}}})"
         if jsbeautifier:
-            output = jsbeautifier.beautify(output, {"indent_size": 2})
+            output = jsbeautifier.beautify(output, {"indent_size": 2}) # pyright: ignore[reportArgumentType]
         parser_js.write_text(output, encoding="utf-8")
         print(f"Generated parser.js written to: {parser_js.resolve()}")
 

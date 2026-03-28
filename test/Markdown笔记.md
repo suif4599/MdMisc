@@ -231,6 +231,44 @@ function add(x, y) {
 >> 这是第二行
 >>> 这是第三行
 
+### .Callout
+
+```markdown
+> [!abstract] 这里可以修改标题
+> 这是 Callout 语法
+```
+
+> [!abstract] 这里可以修改标题
+> 这是 Callout 语法
+
+> [!tip]+
+> Callout 语法是支持展开的
+> 只需要在 `[!]` 后加上 `+/-` 即可
+> 也即本例中的 `> [!tip]+`
+>> [!tip]- 也可以默认收起
+>> 还能递归展开
+
+> [!warning]
+> 默认收起的 Callout 在打印时不会自动显示
+> 如果需要自动展开，必须使用 `<script>` 标签处理打印事件
+
+> [!info]
+> 下面是支持的其他样式
+
+> [!success]
+
+> [!question]
+
+> [!failure]
+
+> [!danger]
+
+> [!bug]
+
+> [!example]
+
+> [!quote]
+
 ### .链接
 
 - `[标题](网址)` （带标题）
@@ -242,6 +280,30 @@ function add(x, y) {
 - <url>（不带标题）_【不推荐Inline HTML】_
 
 ## .排版
+
+### .长代码
+
+```python
+def resolve_extension_dir(
+    extensions_root: Path,
+    extension_pattern: str,
+    explicit_extension_dir: Optional[Path] = None,
+) -> Path:
+    if explicit_extension_dir is not None:
+        if not explicit_extension_dir.exists():
+            raise FileNotFoundError(f"Extension directory not found: {explicit_extension_dir}")
+        return explicit_extension_dir
+
+    matches = sorted(extensions_root.glob(extension_pattern))
+    if not matches:
+        raise FileNotFoundError(
+            "No extension directory matched pattern "
+            f"'{extension_pattern}' under '{extensions_root}'"
+        )
+
+    # Pick the latest-looking directory by lexical order to handle version suffixes.
+    return matches[-1]
+```
 
 ### .换行
 
