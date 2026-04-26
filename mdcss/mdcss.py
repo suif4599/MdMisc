@@ -15,7 +15,7 @@ TEMPLATE_DIR = Path(__file__).parent / "templates"
 
 cssutils.log.setLevel("CRITICAL")
 
-def load_template(dir_: Literal["css", "parser"], name: str, **kwargs: dict[str, Any]) -> str:
+def load_template(dir_: Literal["css", "parser"], name: str, **kwargs: Any) -> str:
     file = TEMPLATE_DIR / dir_ / name
     if not file.exists():
         raise FileNotFoundError(f"Template not found: {file}")
@@ -450,6 +450,10 @@ def build_parser_blocks(mappers: str) -> Tuple[List[str], List[str]]:
     # Paragraph indent
     parser_blocks.append(
         load_template("parser", "preparser_indent.js")
+    )
+    # Invert brightness
+    parser_blocks.append(
+        load_template("parser", "preparser_invert_brightness.js")
     )
     # Fence extract (must run first in markdown preprocess)
     parser_blocks.append(

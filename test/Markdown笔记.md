@@ -160,12 +160,12 @@ function add(x, y) {
 2. `![100px(.这是宽度100px的图片)](./images/image.jpeg)`
    ![100px(.这是宽度100px的图片)](./images/image.jpeg)
 
-- 多图排版
+- 多图排版与图片效果
 
 示例：
 
-`![25r(.左(.这是一行三张图片))](./images/image.jpeg) ![25r(.中)](./images/image.jpeg) ![25r(.右)](./images/image.jpeg)`
-![25r(.左(.这是一行三张图片))](./images/image.jpeg) ![25r(.中)](./images/image.jpeg) ![25r(.右)](./images/image.jpeg)
+`![25ri(.反相(.三者均仅在预览时生效))](./images/image.jpeg) ![25rI(.反转亮度（实验性）)](./images/image.jpeg) ![25rm(.去除背景)](./images/image.jpeg)`
+![25ri(.反相(.三者均仅在预览时生效))](./images/image.jpeg) ![25rI(.反转亮度（实验性）)](./images/image.jpeg) ![25rm(.去除背景（实验性）)](./images/image.jpeg)
 
 - 左右对齐
 

@@ -35,6 +35,16 @@
     display: block !important;
     margin: 0 !important;
   }
+  /* Invert & Mix */
+  img[alt*="i"]:not([alt*="m"]):not([alt*="I"]) {
+    filter: invert(85%);
+  }
+  img[alt*="I"]:not([alt*="m"]):not([alt*="i"]) {
+    filter: url(#invert-brightness);
+  }
+  img[alt*="m"]:not([alt*="i"]):not([alt*="I"]) {
+    mix-blend-mode: multiply;
+  }
   /* Keep headings and separators from wrapping beside floated images. */
   h1, h2, h3, h4, h5, h6, hr {
     clear: both;

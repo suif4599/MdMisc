@@ -105,4 +105,11 @@
     break-inside: avoid !important;
     page-break-inside: avoid !important;
   }
+  /* Remove invert and mix */
+  img[alt*="i"],
+  img[alt*="m"],
+  img[alt*="I"] {
+    filter: none !important;
+    mix-blend-mode: normal !important;
+  }
 }
