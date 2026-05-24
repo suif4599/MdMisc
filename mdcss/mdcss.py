@@ -15,7 +15,7 @@ TEMPLATE_DIR = Path(__file__).parent / "templates"
 
 cssutils.log.setLevel("CRITICAL")
 
-def load_template(dir_: Literal["css", "parser"], name: str, **kwargs: Any) -> str:
+def load_template(dir_: Literal["css", "parser", "docheader"], name: str, **kwargs: Any) -> str:
     file = TEMPLATE_DIR / dir_ / name
     if not file.exists():
         raise FileNotFoundError(f"Template not found: {file}")
@@ -505,6 +505,7 @@ def write_output(
     blocks: List[str],
     parse_blocks: List[str] = [],
     html_blocks: List[str] = [],
+    header_blocks: List[str] = [],
 ) -> None:
     try:
         import jsbeautifier
@@ -550,6 +551,14 @@ def write_output(
             output = jsbeautifier.beautify(output, {"indent_size": 2}) # pyright: ignore[reportArgumentType]
         parser_js.write_text(output, encoding="utf-8")
         print(f"Generated parser.js written to: {parser_js.resolve()}")
+    if header_blocks:
+        header_js = "\n".join(map(lambda x: x.strip("\n"), header_blocks))
+        if jsbeautifier:
+            header_js = jsbeautifier.beautify(header_js, {"indent_size": 2}) # pyright: ignore[reportArgumentType]
+        header_html = f"<script type=\"text/javascript\">\n{header_js}\n</script>"
+        header_html_path = output_path / "head.html"
+        header_html_path.write_text(header_html, encoding="utf-8")
+        print(f"Generated head.html written to: {header_html_path.resolve()}")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -573,6 +582,11 @@ def build_parser() -> argparse.ArgumentParser:
         type=Path,
         default=None,
         help="Explicit extension directory (overrides pattern matching).",
+    )
+    parser.add_argument(
+        "--expand-detail",
+        action="store_true",
+        help="Expand details in print mode automatically.",
     )
     parser.add_argument(
         "--font",
@@ -624,6 +638,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--enable-parser",
         action="store_true",
         help="Generate features that require parser.js support."
+    )
+    parser.add_argument(
+        "--enable-header",
+        action="store_true",
+        help="Generate features that require head.html support."
     )
     parser.add_argument(
         "--enable-table-horizontal-scroll",
@@ -695,8 +714,15 @@ def main() -> None:
         parse_blocks, html_blocks = build_parser_blocks(args.auto_count)
     else:
         parse_blocks, html_blocks = [], []
+    
+    header_blocks: List[str] = []
+    if args.enable_header:
+        if args.expand_detail:
+            header_blocks.append(
+                load_template("docheader", "expand_detail.js")
+            )
 
-    write_output(output_path, blocks, parse_blocks, html_blocks)
+    write_output(output_path, blocks, parse_blocks, html_blocks, header_blocks)
 
 
 if __name__ == "__main__":

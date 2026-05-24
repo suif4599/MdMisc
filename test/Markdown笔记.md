@@ -260,7 +260,7 @@ function add(x, y) {
 
 > [!warning]
 > 默认收起的 Callout 在打印时不会自动显示
-> 如果需要自动展开，必须使用 `<script>` 标签处理打印事件
+> 如果需要自动展开，启用 `--expand-detail` 和 `--enable-header`
 
 > [!info]
 > 下面是支持的其他样式

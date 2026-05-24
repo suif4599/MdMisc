@@ -19,7 +19,9 @@ python mdcss/mdcss.py \
     --main-css preview_theme/github-light.css \
     --codeblock-css prism_theme/github.css \
     --print-margin "5mm" \
-    --enable-parser
+    --expand-detail \
+    --enable-parser \
+    --enable-header
 ```
 
 ### 1.2 支持的功能
@@ -78,6 +80,7 @@ python mdcss/mdcss.py \
         |     \     |    文本6   |       \      |   \   |
         ```
 10. 代码块不会另起一页，而是直接跟随上一页
+11. 自动展开 detail：使用 `--expand-detail`（当 `--enable-header` 启用时生效）之后，`<detail>` 标签（比如Callout）会在打印时自动展开
 
 
 ## 2. `test/`
