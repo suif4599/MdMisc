@@ -3,7 +3,7 @@ import shutil
 import re
 import unicodedata
 from pathlib import Path
-from typing import List, Optional, Tuple, Any, Literal
+from typing import Any, Literal
 
 import cssutils
 from fontTools.ttLib import TTFont
@@ -34,7 +34,7 @@ def load_template(dir_: Literal["css", "parser", "docheader"], name: str, **kwar
 def resolve_extension_dir(
     extensions_root: Path,
     extension_pattern: str,
-    explicit_extension_dir: Optional[Path] = None,
+    explicit_extension_dir: Path | None = None,
 ) -> Path:
     if explicit_extension_dir is not None:
         if not explicit_extension_dir.exists():
@@ -53,21 +53,20 @@ def resolve_extension_dir(
 
 
 def generate_print_style(
-    main_css_path,
-    codeblock_css_path,
-    reveal_css_path=None,
+    main_css_path: Path,
+    codeblock_css_path: Path,
+    reveal_css_path: Path | None = None,
     print_margin: str = "2cm",
 ):
     """Generate @media print CSS safely with cssutils."""
 
-    def load_css(path):
+    def load_css(path: Path | None):
         if path is None:
             return None
-        p = Path(path)
-        if not p.exists():
-            print(f"Warning: path not found, skipped: {p}")
+        if not path.exists():
+            print(f"Warning: path not found, skipped: {path}")
             return None
-        return p.read_text(encoding="utf-8")
+        return path.read_text(encoding="utf-8")
 
     all_css = ""
     for path in [main_css_path, codeblock_css_path, reveal_css_path]:
@@ -79,7 +78,7 @@ def generate_print_style(
         return "/* Error: no CSS content loaded */"
 
     sheet = cssutils.parseString(all_css)
-    new_rules = []
+    new_rules: list[str] = []
 
     ui_keywords = {
         ".sidebar",
@@ -121,7 +120,7 @@ def generate_print_style(
             )
         )
 
-    def append_style_rule(rule_obj):
+    def append_style_rule(rule_obj: Any):
         selector = rule_obj.selectorText
 
         if not selector or is_ui_selector(selector):
@@ -147,7 +146,7 @@ def generate_print_style(
             if "print" not in rule.media.mediaText.lower():
                 continue
 
-            nested_rules = []
+            nested_rules: list[str] = []
             for nested in rule.cssRules:
                 if nested.type != nested.STYLE_RULE:
                     continue
@@ -191,7 +190,7 @@ FONT_FORMATS = {
 }
 
 
-def _get_name_record(font: TTFont, name_ids: Tuple[int, ...]) -> Optional[str]:
+def _get_name_record(font: TTFont, name_ids: tuple[int, ...]) -> str | None:
     for name_id in name_ids:
         for record in font["name"].names:
             if record.nameID != name_id:
@@ -217,9 +216,9 @@ def _safe_asset_stem(value: str) -> str:
     return cleaned.lower() or "font"
 
 
-def _unique_keep_order(values: List[str]) -> List[str]:
-    seen = set()
-    ordered = []
+def _unique_keep_order(values: list[str]) -> list[str]:
+    seen: set[str] = set()
+    ordered: list[str] = []
     for item in values:
         key = item.strip()
         if not key:
@@ -231,8 +230,8 @@ def _unique_keep_order(values: List[str]) -> List[str]:
     return ordered
 
 
-def _name_aliases(font: TTFont) -> List[str]:
-    aliases: List[str] = []
+def _name_aliases(font: TTFont) -> list[str]:
+    aliases: list[str] = []
     for record in font["name"].names:
         if record.nameID not in {1, 4, 6, 16, 17}:
             continue
@@ -264,7 +263,7 @@ def _copy_font_to_assets(
     return f"fonts/{dest_name}"
 
 
-def read_font_metadata(font_path: Path) -> Tuple[str, int, str, str, List[str]]:
+def read_font_metadata(font_path: Path) -> tuple[str, int, str, str, list[str]]:
     if not font_path.exists():
         raise FileNotFoundError(f"Font file not found: {font_path}")
     if not font_path.is_file():
@@ -301,12 +300,12 @@ def read_font_metadata(font_path: Path) -> Tuple[str, int, str, str, List[str]]:
     return family_name, weight, style, font_format, aliases
 
 
-def resolve_font_family(font_path: Path, font_assets_dir: Path) -> Tuple[str, str]:
+def resolve_font_family(font_path: Path, font_assets_dir: Path) -> tuple[str, str]:
     font_path = font_path.expanduser().resolve()
     base_family_name, _, _, _, _ = read_font_metadata(font_path)
     base_family_key = _normalize_font_family_name(base_family_name)
 
-    variant_files: List[Tuple[Path, int, str, str, List[str]]] = []
+    variant_files: list[tuple[Path, int, str, str, list[str]]] = []
     for candidate in sorted(font_path.parent.iterdir()):
         if candidate.suffix.lower() not in FONT_FORMATS or not candidate.is_file():
             continue
@@ -353,16 +352,16 @@ def resolve_font_family(font_path: Path, font_assets_dir: Path) -> Tuple[str, st
 
 
 def build_style_blocks(
-    font_path: Optional[Path],
+    font_path: Path | None,
     main_css_path: Path,
     codeblock_css_path: Path,
     print_margin: str,
     font_assets_dir: Path,
-    code_font_path: Optional[Path] = None,
+    code_font_path: Path | None = None,
     enable_parser: bool = False,
     enable_table_horizontal_scroll: bool = False,
-) -> List[str]:
-    blocks: List[str] = []
+) -> list[str]:
+    blocks: list[str] = []
 
     font_family_name = None
     content_font_faces = None
@@ -444,9 +443,9 @@ def build_style_blocks(
     return blocks
 
 
-def build_parser_blocks(mappers: str) -> Tuple[List[str], List[str]]:
-    parser_blocks: List[str] = []
-    html_blocks: List[str] = []
+def build_parser_blocks(mappers: str) -> tuple[list[str], list[str]]:
+    parser_blocks: list[str] = []
+    html_blocks: list[str] = []
     # Paragraph indent
     parser_blocks.append(
         load_template("parser", "preparser_indent.js")
@@ -476,7 +475,7 @@ def build_parser_blocks(mappers: str) -> Tuple[List[str], List[str]]:
         load_template("parser", "postparser_imagetitle.js")
     )
     # title prefix
-    levels = []
+    levels: list[str] = []
     for i in re.split(r"\s*,\s*", mappers.strip()):
         if i not in {"roman", "romanUpper", "latin", "latinUpper", "chinese", "number", "none"}:
             raise ValueError(f"Unsupported mapper: {i}, only <roman|romanUpper|latin|latinUpper|chinese|number|none> are supported.")
@@ -502,10 +501,10 @@ def build_parser_blocks(mappers: str) -> Tuple[List[str], List[str]]:
 
 def write_output(
     output_path: Path,
-    blocks: List[str],
-    parse_blocks: List[str] = [],
-    html_blocks: List[str] = [],
-    header_blocks: List[str] = [],
+    blocks: list[str],
+    parse_blocks: list[str] = [],
+    html_blocks: list[str] = [],
+    header_blocks: list[str] = [],
 ) -> None:
     try:
         import jsbeautifier
@@ -522,7 +521,7 @@ def write_output(
         text = cssbeautifier.beautify(text, {"indent_size": 2})
     style_less.write_text(text, encoding="utf-8")
     print(f"Generated style.less written to: {style_less.resolve()}")
-    parser_blocks: List[str] = []
+    parser_blocks: list[str] = []
     if parse_blocks:
         parser_blocks.append(
             "  onWillParseMarkdown: async function(markdown) {"
@@ -715,7 +714,7 @@ def main() -> None:
     else:
         parse_blocks, html_blocks = [], []
     
-    header_blocks: List[str] = []
+    header_blocks: list[str] = []
     if args.enable_header:
         if args.expand_detail:
             header_blocks.append(
