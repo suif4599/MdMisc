@@ -82,6 +82,49 @@ python mdcss/mdcss.py \
 10. 代码块不会另起一页，而是直接跟随上一页
 11. 自动展开 detail：使用 `--expand-detail`（当 `--enable-header` 启用时生效）之后，`<detail>` 标签（比如Callout）会在打印时自动展开
 
+### 1.3 在nix中使用
+
+```nix
+{pkgs, ...}: let
+  scriptSrc = pkgs.fetchgit {
+    url = "https://github.com/suif4599/MdMisc.git";
+    rev = "commit";
+    hash = "sha256-xxx=";
+
+    sparseCheckout = ["mdcss"];
+  };
+
+  pythonEnv = pkgs.python3.withPackages (
+    ps:
+      with ps; [
+        cssutils
+        fonttools
+        jsbeautifier
+        cssbeautifier
+      ]
+  );
+
+  vscode-markdown-preview-enhanced-home =
+    pkgs.runCommand
+    "vscode-markdown-preview-enhanced-home" {
+      nativeBuildInputs = [pythonEnv];
+    } ''
+      mkdir -p $out/crossnote
+      cd ${scriptSrc}/mdcss
+      python mdcss.py \
+        --your-custom-config \
+        --extension-dir "${pkgs.vscode-extensions.shd101wyy.markdown-preview-enhanced}/share/vscode/extensions/shd101wyy.markdown-preview-enhanced" \
+        --output $out/crossnote
+    '';
+in {
+  home.packages = [
+    # other pkgs
+    vscode-markdown-preview-enhanced-home
+  ];
+
+  xdg.configFile."crossnote".source = "${vscode-markdown-preview-enhanced-home}/crossnote";
+}
+```
 
 ## 2. `test/`
 
