@@ -1,4 +1,5 @@
 import argparse
+import json
 import shutil
 import re
 import unicodedata
@@ -9,9 +10,114 @@ import cssutils
 from fontTools.ttLib import TTFont
 
 HOME = Path.home()
+SCRIPT_DIR = Path(__file__).resolve().parent
 DEFAULT_EXTENSIONS_ROOT = HOME / ".vscode" / "extensions"
 DEFAULT_OUTPUT = HOME / ".local" / "state" / "crossnote"
-TEMPLATE_DIR = Path(__file__).parent / "templates"
+TEMPLATE_DIR = SCRIPT_DIR / "templates"
+CONFIG_FILE_NAME = "config.json"
+
+
+def load_config() -> dict[str, Any]:
+    """Load user configuration from config.json next to mdcss.py.
+
+    Returns a dict; missing file or parse errors result in an empty dict + warning.
+    """
+    config_path = SCRIPT_DIR / CONFIG_FILE_NAME
+    if not config_path.exists():
+        return {}
+
+    try:
+        data = json.loads(config_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError) as exc:
+        print(f"Warning: failed to parse {config_path}: {exc}")
+        return {}
+
+    if not isinstance(data, dict):
+        print(f"Warning: {config_path} must contain a JSON object, got {type(data).__name__}")
+        return {}
+
+    return data
+
+
+def _resolve_path(value: str | None) -> Path | None:
+    """Convert a config string value to a Path, expanding ~ only.
+
+    Relative paths are left relative — resolved against cwd at use-site.
+    """
+    if value is None:
+        return None
+    return Path(value).expanduser()
+
+
+def _raw_path(value: str | None) -> Path | None:
+    """Like _resolve_path but keeps relative paths untouched.
+
+    Use for main_css / codeblock_css so they stay as extension-relative
+    strings for resolve_crossnote_style_path() to handle later.
+    """
+    if value is None:
+        return None
+    return Path(value).expanduser()
+
+
+def _serialize_path(value: Path | None) -> str | None:
+    """Inverse of _resolve_path: make a Path portable for config.json.
+
+    Priority: relative-to-cwd → ~/... → absolute.
+    """
+    if value is None:
+        return None
+    p = Path(value).expanduser().resolve()
+    try:
+        return str(p.relative_to(Path.cwd()))
+    except ValueError:
+        pass
+    try:
+        return str(Path("~") / p.relative_to(HOME))
+    except (ValueError, OSError):
+        pass
+    return str(p)
+
+
+def save_config(args: argparse.Namespace) -> None:
+    """Write effective settings to mdcss/config.json."""
+    config_path = SCRIPT_DIR / CONFIG_FILE_NAME
+    data: dict[str, Any] = {}
+
+    # Path-valued keys
+    for key in [
+        "extensions_root", "extension_dir", "font", "code_font", "output",
+    ]:
+        value = _serialize_path(getattr(args, key, None))
+        if value is not None:
+            data[key] = value
+
+    # main_css / codeblock_css — keep extension-relative path as-is
+    for key in ["main_css", "codeblock_css"]:
+        val: Path | None = getattr(args, key, None)
+        if val is not None:
+            data[key] = str(val) if not val.is_absolute() else _serialize_path(val)
+
+    # String-valued keys
+    for key in ["extension_pattern", "print_margin", "auto_count"]:
+        val = getattr(args, key, None)
+        if val is not None:
+            data[key] = val
+
+    # Boolean flags
+    for key in [
+        "expand_detail", "enable_parser", "enable_header",
+        "enable_table_horizontal_scroll",
+    ]:
+        val = getattr(args, key, None)
+        if val:
+            data[key] = True
+
+    config_path.write_text(
+        json.dumps(data, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+    print(f"Config saved to: {config_path}")
 
 cssutils.log.setLevel("CRITICAL")
 
@@ -191,8 +297,11 @@ FONT_FORMATS = {
 
 
 def _get_name_record(font: TTFont, name_ids: tuple[int, ...]) -> str | None:
+    name_table = font.get("name")
+    if name_table is None or not hasattr(name_table, "names"):
+        return None
     for name_id in name_ids:
-        for record in font["name"].names:
+        for record in name_table.names:  # type: ignore[attr-defined]
             if record.nameID != name_id:
                 continue
             try:
@@ -232,7 +341,10 @@ def _unique_keep_order(values: list[str]) -> list[str]:
 
 def _name_aliases(font: TTFont) -> list[str]:
     aliases: list[str] = []
-    for record in font["name"].names:
+    name_table = font.get("name")
+    if name_table is None or not hasattr(name_table, "names"):
+        return aliases
+    for record in name_table.names:  # type: ignore[attr-defined]
         if record.nameID not in {1, 4, 6, 16, 17}:
             continue
         try:
@@ -560,37 +672,40 @@ def write_output(
         print(f"Generated head.html written to: {header_html_path.resolve()}")
 
 
-def build_parser() -> argparse.ArgumentParser:
+def build_parser(config: dict[str, Any]) -> argparse.ArgumentParser:
+    cfg: dict[str, Any] = config  # shorthand
+
     parser = argparse.ArgumentParser(
         description="Generate Crossnote style.less with more features."
     )
     parser.add_argument(
         "--extensions-root",
         type=Path,
-        default=DEFAULT_EXTENSIONS_ROOT,
+        default=_resolve_path(cfg.get("extensions_root")) or DEFAULT_EXTENSIONS_ROOT,
         help="Base directory containing VS Code extensions.",
     )
     parser.add_argument(
         "--extension-pattern",
         type=str,
-        default="shd101wyy.markdown-preview-enhanced-*",
+        default=cfg.get("extension_pattern", "shd101wyy.markdown-preview-enhanced-*"),
         help="Glob pattern for the markdown-preview-enhanced extension directory.",
     )
     parser.add_argument(
         "--extension-dir",
         type=Path,
-        default=None,
+        default=_resolve_path(cfg.get("extension_dir")),
         help="Explicit extension directory (overrides pattern matching).",
     )
     parser.add_argument(
         "--expand-detail",
         action="store_true",
+        default=cfg.get("expand_detail", False),
         help="Expand details in print mode automatically.",
     )
     parser.add_argument(
         "--font",
         type=Path,
-        default=None,
+        default=_resolve_path(cfg.get("font")),
         help=(
             "Optional font file path for the main document font. The script reads its family "
             "name from metadata and scans sibling files in the same directory for variants. "
@@ -600,7 +715,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--main-css",
         type=Path,
-        required=True,
+        default=_raw_path(cfg.get("main_css")),
         help=(
             "Main theme CSS path. If relative, it is resolved under "
             "<extension-dir>/crossnote/styles/."
@@ -609,7 +724,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--codeblock-css",
         type=Path,
-        required=True,
+        default=_raw_path(cfg.get("codeblock_css")),
         help=(
             "Code block theme CSS path. If relative, it is resolved under "
             "<extension-dir>/crossnote/styles/."
@@ -618,7 +733,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--code-font",
         type=Path,
-        default=None,
+        default=_resolve_path(cfg.get("code_font")),
         help=(
             "Optional font file path for code blocks. The script reads its family name "
             "from metadata and scans sibling files in the same directory for variants."
@@ -627,7 +742,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--print-margin",
         type=str,
-        default="5mm",
+        default=cfg.get("print_margin", "5mm"),
         help=(
             "Print content margin value used as CSS padding in @media print body. "
             "Supports CSS length units and 1-4 value syntax, e.g. '2cm', '20mm', '1in 0.8in'."
@@ -636,16 +751,19 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--enable-parser",
         action="store_true",
-        help="Generate features that require parser.js support."
+        default=cfg.get("enable_parser", False),
+        help="Generate features that require parser.js support.",
     )
     parser.add_argument(
         "--enable-header",
         action="store_true",
-        help="Generate features that require head.html support."
+        default=cfg.get("enable_header", False),
+        help="Generate features that require head.html support.",
     )
     parser.add_argument(
         "--enable-table-horizontal-scroll",
         action="store_true",
+        default=cfg.get("enable_table_horizontal_scroll", False),
         help=(
             "Allow horizontal scrolling for wide tables (keep current behavior). "
             "If not set, tables will avoid horizontal scroll and force content wrapping."
@@ -654,7 +772,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--auto-count",
         type=str,
-        default="none, chinese, number, number, latin, roman",
+        default=cfg.get("auto_count", "none, chinese, number, number, latin, roman"),
         help=(
             "Comma-separated list of title auto-count formatter for heading levels 1-6. "
             "Supported formatter: roman, romanUpper, latin, latinUpper, chinese, number, none."
@@ -663,8 +781,13 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--output",
         type=Path,
-        default=DEFAULT_OUTPUT,
+        default=_resolve_path(cfg.get("output")) or DEFAULT_OUTPUT,
         help="Output crossnote style directory (style.less and optionally parser.js will be written here).",
+    )
+    parser.add_argument(
+        "--save-config",
+        action="store_true",
+        help="Save the effective settings (after CLI and config merge) to config.json and exit.",
     )
     return parser
 
@@ -676,8 +799,18 @@ def resolve_crossnote_style_path(extension_dir: Path, css_path: Path) -> Path:
 
 
 def main() -> None:
-    parser = build_parser()
+    config = load_config()
+    parser = build_parser(config)
     args = parser.parse_args()
+
+    if args.main_css is None:
+        parser.error("--main-css is required (set it via CLI or 'main_css' in config.json)")
+    if args.codeblock_css is None:
+        parser.error("--codeblock-css is required (set it via CLI or 'codeblock_css' in config.json)")
+
+    if args.save_config:
+        save_config(args)
+        return
 
     extension_dir = resolve_extension_dir(
         extensions_root=args.extensions_root,
