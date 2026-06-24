@@ -1,3 +1,9 @@
 # pixi environments
 .pixi/*
 !.pixi/config.toml
+
+.vscode
+.claude
+
+# User-local config (copy from mdcss/config.example.json)
+mdcss/config.json
