@@ -19,15 +19,20 @@
   }
 <variable>new_rules</variable>
   /* Fix Prism line-numbers layout in print mode */
-  .markdown-preview pre.line-numbers {
+  body pre.line-numbers {
     position: relative !important;
     padding-left: 3.8em !important;
     counter-reset: linenumber !important;
+    font-size: 14px !important;
+    line-height: 20px !important;
   }
-  .markdown-preview pre.line-numbers > code {
+  body pre.line-numbers > code,
+  body pre[class*="language-"].line-numbers > code {
     white-space: pre !important;
+    font-size: inherit !important;
+    line-height: inherit !important;
   }
-  .markdown-preview pre.line-numbers .line-numbers-rows {
+  body pre.line-numbers .line-numbers-rows {
     position: absolute !important;
     top: 1em !important;
     left: 0 !important;
@@ -39,12 +44,12 @@
     pointer-events: none !important;
     user-select: none !important;
   }
-  .markdown-preview pre.line-numbers .line-numbers-rows > span {
+  body pre.line-numbers .line-numbers-rows > span {
     display: block !important;
     line-height: inherit !important;
     counter-increment: linenumber !important;
   }
-  .markdown-preview pre.line-numbers .line-numbers-rows > span:before {
+  body pre.line-numbers .line-numbers-rows > span:before {
     content: counter(linenumber) !important;
     display: block !important;
     line-height: inherit !important;
