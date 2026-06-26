@@ -66,7 +66,7 @@ def build_style_blocks(
     display: table !important;
     width: 100% !important;
     max-width: 100% !important;
-    table-layout: fixed !important;
+    table-layout: auto !important;
     overflow-x: visible !important;
   }
   th, td {
