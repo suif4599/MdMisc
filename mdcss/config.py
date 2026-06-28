@@ -32,6 +32,23 @@ def load_config() -> dict[str, Any]:
     return data
 
 
+def _nested_get(cfg: dict[str, Any], dotted: str, default: Any = None) -> Any:
+    """Read a value from a possibly nested dict via dot-separated keys.
+
+    Supports both flat (``"font"``) and nested (``"fonts.font"``) lookups
+    so that config.json grouping can change without breaking the script.
+    """
+    keys = dotted.split(".")
+    val: Any = cfg
+    for k in keys:
+        if not isinstance(val, dict):
+            return default
+        val = val.get(k)
+        if val is None:
+            return default
+    return val
+
+
 def _resolve_path(value: str | None) -> Path | None:
     """Convert a config string value to a Path, expanding ~ only.
 
@@ -75,38 +92,43 @@ def _serialize_path(value: Path | None) -> str | None:
 
 
 def save_config(args: argparse.Namespace) -> None:
-    """Write effective settings to mdcss/config.json."""
+    """Write effective settings to mdcss/config.json (nested group format)."""
     config_path = SCRIPT_DIR / CONFIG_FILE_NAME
+
+    def _set(d: dict[str, Any], dotted: str, value: Any) -> None:
+        *parts, last = dotted.split(".")
+        for p in parts:
+            d = d.setdefault(p, {})
+        if value is not None:
+            d[last] = value
+
     data: dict[str, Any] = {}
 
     # Path-valued keys
-    for key in [
-        "extensions_root", "extension_dir", "font", "code_font", "output",
-    ]:
-        value = _serialize_path(getattr(args, key, None))
-        if value is not None:
-            data[key] = value
+    for key in ["fonts.font", "fonts.code_font", "paths.extensions_root",
+                 "paths.extension_dir", "paths.output"]:
+        _set(data, key, _serialize_path(getattr(args, key, None)))
 
     # main_css / codeblock_css — keep extension-relative path as-is
-    for key in ["main_css", "codeblock_css"]:
+    for key, dotted in [("main_css", "themes.main_css"), ("codeblock_css", "themes.codeblock_css")]:
         val: Path | None = getattr(args, key, None)
         if val is not None:
-            data[key] = str(val) if not val.is_absolute() else _serialize_path(val)
+            _set(data, dotted,
+                 str(val) if not val.is_absolute() else _serialize_path(val))
 
     # String-valued keys
-    for key in ["extension_pattern", "print_margin", "auto_count", "heading_underline"]:
-        val = getattr(args, key, None)
-        if val is not None:
-            data[key] = val
+    for key, dotted in [("extension_pattern", "paths.extension_pattern"),
+                        ("print_margin", "print.print_margin"),
+                        ("auto_count", "headings.auto_count"),
+                        ("heading_underline", "headings.heading_underline")]:
+        _set(data, dotted, getattr(args, key, None))
 
     # Boolean flags
-    for key in [
-        "expand_detail", "enable_parser", "enable_header",
-        "enable_table_horizontal_scroll",
-    ]:
+    for key in ["expand_detail", "enable_parser",
+                "enable_header", "enable_table_horizontal_scroll"]:
         val = getattr(args, key, None)
         if val:
-            data[key] = True
+            _set(data, f"features.{key}", True)
 
     config_path.write_text(
         json.dumps(data, indent=2, ensure_ascii=False) + "\n",
@@ -151,31 +173,31 @@ def build_parser(config: dict[str, Any]) -> argparse.ArgumentParser:
     parser.add_argument(
         "--extensions-root",
         type=Path,
-        default=_resolve_path(cfg.get("extensions_root")) or DEFAULT_EXTENSIONS_ROOT,
+        default=_resolve_path(_nested_get(cfg, "paths.extensions_root")) or DEFAULT_EXTENSIONS_ROOT,
         help="Base directory containing VS Code extensions.",
     )
     parser.add_argument(
         "--extension-pattern",
         type=str,
-        default=cfg.get("extension_pattern", "shd101wyy.markdown-preview-enhanced-*"),
+        default=_nested_get(cfg, "paths.extension_pattern", "shd101wyy.markdown-preview-enhanced-*"),
         help="Glob pattern for the markdown-preview-enhanced extension directory.",
     )
     parser.add_argument(
         "--extension-dir",
         type=Path,
-        default=_resolve_path(cfg.get("extension_dir")),
+        default=_resolve_path(_nested_get(cfg, "paths.extension_dir")),
         help="Explicit extension directory (overrides pattern matching).",
     )
     parser.add_argument(
         "--expand-detail",
         action="store_true",
-        default=cfg.get("expand_detail", False),
+        default=_nested_get(cfg, "features.expand_detail", False),
         help="Expand details in print mode automatically.",
     )
     parser.add_argument(
         "--font",
         type=Path,
-        default=_resolve_path(cfg.get("font")),
+        default=_resolve_path(_nested_get(cfg, "fonts.font")),
         help=(
             "Optional font file path for the main document font. The script reads its family "
             "name from metadata and scans sibling files in the same directory for variants. "
@@ -185,7 +207,7 @@ def build_parser(config: dict[str, Any]) -> argparse.ArgumentParser:
     parser.add_argument(
         "--main-css",
         type=Path,
-        default=_raw_path(cfg.get("main_css")),
+        default=_raw_path(_nested_get(cfg, "themes.main_css")),
         help=(
             "Main theme CSS path. If relative, it is resolved under "
             "<extension-dir>/crossnote/styles/."
@@ -194,7 +216,7 @@ def build_parser(config: dict[str, Any]) -> argparse.ArgumentParser:
     parser.add_argument(
         "--codeblock-css",
         type=Path,
-        default=_raw_path(cfg.get("codeblock_css")),
+        default=_raw_path(_nested_get(cfg, "themes.codeblock_css")),
         help=(
             "Code block theme CSS path. If relative, it is resolved under "
             "<extension-dir>/crossnote/styles/."
@@ -203,7 +225,7 @@ def build_parser(config: dict[str, Any]) -> argparse.ArgumentParser:
     parser.add_argument(
         "--code-font",
         type=Path,
-        default=_resolve_path(cfg.get("code_font")),
+        default=_resolve_path(_nested_get(cfg, "fonts.code_font")),
         help=(
             "Optional font file path for code blocks. The script reads its family name "
             "from metadata and scans sibling files in the same directory for variants."
@@ -212,7 +234,7 @@ def build_parser(config: dict[str, Any]) -> argparse.ArgumentParser:
     parser.add_argument(
         "--print-margin",
         type=str,
-        default=cfg.get("print_margin", "5mm"),
+        default=_nested_get(cfg, "print.print_margin", "5mm"),
         help=(
             "Print content margin value used as CSS padding in @media print body. "
             "Supports CSS length units and 1-4 value syntax, e.g. '2cm', '20mm', '1in 0.8in'."
@@ -221,19 +243,19 @@ def build_parser(config: dict[str, Any]) -> argparse.ArgumentParser:
     parser.add_argument(
         "--enable-parser",
         action="store_true",
-        default=cfg.get("enable_parser", False),
+        default=_nested_get(cfg, "features.enable_parser", False),
         help="Generate features that require parser.js support.",
     )
     parser.add_argument(
         "--enable-header",
         action="store_true",
-        default=cfg.get("enable_header", False),
+        default=_nested_get(cfg, "features.enable_header", False),
         help="Generate features that require head.html support.",
     )
     parser.add_argument(
         "--enable-table-horizontal-scroll",
         action="store_true",
-        default=cfg.get("enable_table_horizontal_scroll", False),
+        default=_nested_get(cfg, "features.enable_table_horizontal_scroll", False),
         help=(
             "Allow horizontal scrolling for wide tables (keep current behavior). "
             "If not set, tables will avoid horizontal scroll and force content wrapping."
@@ -242,7 +264,7 @@ def build_parser(config: dict[str, Any]) -> argparse.ArgumentParser:
     parser.add_argument(
         "--auto-count",
         type=str,
-        default=cfg.get("auto_count", "none, chinese, number, number, latin, roman"),
+        default=_nested_get(cfg, "headings.auto_count", "none, chinese, number, number, latin, roman"),
         help=(
             "Comma-separated list of title auto-count formatter for heading levels 1-6. "
             "Supported formatter: roman, romanUpper, latin, latinUpper, chinese, number, none."
@@ -251,7 +273,7 @@ def build_parser(config: dict[str, Any]) -> argparse.ArgumentParser:
     parser.add_argument(
         "--heading-underline",
         type=str,
-        default=cfg.get("heading_underline", ""),
+        default=_nested_get(cfg, "headings.heading_underline", ""),
         help=(
             "Comma-separated heading levels to show a underline below, e.g. \"1,2\" for h1 and h2. "
             "Leave empty to disable. Default: \"\" (disabled)."
@@ -260,7 +282,7 @@ def build_parser(config: dict[str, Any]) -> argparse.ArgumentParser:
     parser.add_argument(
         "--output",
         type=Path,
-        default=_resolve_path(cfg.get("output")) or DEFAULT_OUTPUT,
+        default=_resolve_path(_nested_get(cfg, "paths.output")) or DEFAULT_OUTPUT,
         help="Output crossnote style directory (style.less and optionally parser.js will be written here).",
     )
     parser.add_argument(
