@@ -125,7 +125,8 @@ def save_config(args: argparse.Namespace) -> None:
 
     # Boolean flags
     for key in ["expand_detail", "enable_parser",
-                "enable_header", "enable_table_horizontal_scroll"]:
+                "enable_header", "enable_table_horizontal_scroll",
+                "enable_table_caption"]:
         val = getattr(args, key, None)
         if val:
             _set(data, f"features.{key}", True)
@@ -245,6 +246,12 @@ def build_parser(config: dict[str, Any]) -> argparse.ArgumentParser:
         action="store_true",
         default=_nested_get(cfg, "features.enable_parser", False),
         help="Generate features that require parser.js support.",
+    )
+    parser.add_argument(
+        "--enable-table-caption",
+        action="store_true",
+        default=_nested_get(cfg, "features.enable_table_caption", True),
+        help="Render \"Table: caption\" as a numbered figure caption below tables.",
     )
     parser.add_argument(
         "--enable-header",

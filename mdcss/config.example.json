@@ -22,7 +22,8 @@
     "expand_detail": false,
     "enable_parser": false,
     "enable_header": false,
-    "enable_table_horizontal_scroll": false
+    "enable_table_horizontal_scroll": false,
+    "enable_table_caption": true
   },
 
   "headings": {

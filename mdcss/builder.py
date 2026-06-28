@@ -108,7 +108,7 @@ def build_style_blocks(
     return blocks
 
 
-def build_parser_blocks(mappers: str) -> tuple[list[str], list[str]]:
+def build_parser_blocks(mappers: str, enable_table_caption: bool = True) -> tuple[list[str], list[str]]:
     parser_blocks: list[str] = []
     html_blocks: list[str] = []
     # Paragraph indent
@@ -135,6 +135,11 @@ def build_parser_blocks(mappers: str) -> tuple[list[str], list[str]]:
     html_blocks.append(
         load_template("parser", "postparser_table.js")
     )
+    # Table caption
+    if enable_table_caption:
+        html_blocks.append(
+            load_template("parser", "postparser_tablecaption.js")
+        )
     # Image title
     html_blocks.append(
         load_template("parser", "postparser_imagetitle.js")
