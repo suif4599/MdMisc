@@ -11,12 +11,10 @@
 // contain another <table> — that prevents pairing the wrong caption
 // with a table when there are multiple tables in the document.
 html = html.replace(
-    /<p[^>]*>\s*Table:\s*(.*?)<\/p>([\s\S]*?)(<table[\s\S]*?<\/table>)\s*(?:<\/div>)?/gi,
-    (_match, caption, between, tableHtml) => {
+    /<p[^>]*>\s*Table:\s*(.*?)<\/p>\s*(<table[\s\S]*?<\/table>)/gi,
+    (_match, caption, tableHtml) => {
         caption = caption.trim();
         if (!caption) return _match;
-        // "between" should contain at most whitespace / one optional wrapper div
-        if (/<table/i.test(between)) return _match;
         const prefix = caption.startsWith('.') ? '表@TABLE_COUNT_PLACEHOLDER@:\t' : '';
         const displayCaption = caption.startsWith('.') ? caption.slice(1) : caption;
         return `<figure style="width: 100%; margin: 0 auto; text-align: center;">
