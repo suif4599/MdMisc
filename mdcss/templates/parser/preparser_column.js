@@ -106,7 +106,7 @@ function mergeColumnSpec(markdown) {
                 const orderedSpecs = normalizeColumnWidths(
                     Object.keys(specIndex).map((index) => ({ index, spec: specIndex[index] }))
                 );
-                const cols = orderedSpecs.map(({ spec }) => `minmax(0, ${spec.width})`).join(' ');
+                const cols = orderedSpecs.map(({ spec }) => `minmax(auto, ${spec.width})`).join(' ');
                 let outerDiv = `
 
 <div style="display: grid; grid-template-columns: ${cols}; gap: 20px; width: 100%; min-width: 0; box-sizing: border-box;">

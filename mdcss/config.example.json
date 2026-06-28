@@ -1,0 +1,37 @@
+{
+  "//": "Copy this file to config.json and edit your own settings. config.json is git-ignored.",
+
+  "fonts": {
+    "font": "~/fonts/SourceHanSansCN-Regular.otf",
+    "code_font": "~/fonts/MapleMono-Regular.ttf"
+  },
+
+  "themes": {
+    "main_css": "preview_theme/github-light.css",
+    "codeblock_css": "prism_theme/github.css"
+  },
+
+  "paths": {
+    "extensions_root": "~/.vscode/extensions",
+    "extension_dir": "",
+    "extension_pattern": "shd101wyy.markdown-preview-enhanced-*",
+    "output": "~/.local/state/crossnote"
+  },
+
+  "features": {
+    "expand_detail": false,
+    "enable_parser": false,
+    "enable_header": false,
+    "enable_table_horizontal_scroll": false,
+    "enable_table_caption": true
+  },
+
+  "headings": {
+    "heading_underline": "",
+    "auto_count": "none, chinese, number, number, latin, roman"
+  },
+
+  "print": {
+    "print_margin": "2cm"
+  }
+}

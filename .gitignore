@@ -1,3 +1,7 @@
-# pixi environments
+.vscode
+.claude
 .pixi/*
 !.pixi/config.toml
+
+mdcss/__pycache__/
+mdcss/config.json
