@@ -1,0 +1,8 @@
+  <variable>heading_selectors</variable> {
+    content: "";
+    display: block;
+    width: 100%;
+    height: 0.5px;
+    background-color: #bbbbbb;
+    margin-top: 0.2em;
+  }

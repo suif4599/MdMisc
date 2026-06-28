@@ -21,6 +21,9 @@
   "enable_header": false,
   "enable_table_horizontal_scroll": false,
 
+  "//": "=== Heading underline (eg. '1, 2')",
+  "heading_underline": "",
+
   "//": "=== Print ===",
   "print_margin": "2cm",
 

@@ -16,6 +16,7 @@ def build_style_blocks(
     code_font_path: Path | None = None,
     enable_parser: bool = False,
     enable_table_horizontal_scroll: bool = False,
+    heading_underline: str = "",
 ) -> list[str]:
     blocks: list[str] = []
 
@@ -59,6 +60,14 @@ def build_style_blocks(
     blocks.append(
         load_template("css", "style.css")
     )
+
+    if heading_underline:
+        levels = [f"h{l.strip()}::after" for l in heading_underline.replace("，", ",").split(",") if l.strip().isdigit()]
+        if levels:
+            blocks.append(
+                load_template("css", "heading_underline.css",
+                              heading_selectors=",\n".join(levels))
+            )
 
     if not enable_table_horizontal_scroll:
         blocks.append("""

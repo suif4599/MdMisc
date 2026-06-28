@@ -94,7 +94,7 @@ def save_config(args: argparse.Namespace) -> None:
             data[key] = str(val) if not val.is_absolute() else _serialize_path(val)
 
     # String-valued keys
-    for key in ["extension_pattern", "print_margin", "auto_count"]:
+    for key in ["extension_pattern", "print_margin", "auto_count", "heading_underline"]:
         val = getattr(args, key, None)
         if val is not None:
             data[key] = val
@@ -246,6 +246,15 @@ def build_parser(config: dict[str, Any]) -> argparse.ArgumentParser:
         help=(
             "Comma-separated list of title auto-count formatter for heading levels 1-6. "
             "Supported formatter: roman, romanUpper, latin, latinUpper, chinese, number, none."
+        )
+    )
+    parser.add_argument(
+        "--heading-underline",
+        type=str,
+        default=cfg.get("heading_underline", ""),
+        help=(
+            "Comma-separated heading levels to show a underline below, e.g. \"1,2\" for h1 and h2. "
+            "Leave empty to disable. Default: \"\" (disabled)."
         )
     )
     parser.add_argument(
