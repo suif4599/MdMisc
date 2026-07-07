@@ -1,8 +1,7 @@
-import re
 from pathlib import Path
 from typing import Any
 
-import cssutils
+import cssutils  # pyright: ignore[reportMissingImports]
 
 from template import load_template
 

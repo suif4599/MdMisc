@@ -200,8 +200,11 @@ def build_parser(config: dict[str, Any]) -> argparse.ArgumentParser:
         type=Path,
         default=_resolve_path(_nested_get(cfg, "fonts.font")),
         help=(
-            "Optional font file path for the main document font. The script reads its family "
+            "Optional font file path or font family name for the main document font. "
+            "If a path to a .ttf/.otf/.woff/.woff2 file is given, the script reads its family "
             "name from metadata and scans sibling files in the same directory for variants. "
+            "Otherwise the value is treated as a font family name and resolved via fontconfig "
+            "(fc-match); family-name resolution is Linux-only and not yet implemented on Windows. "
             "If omitted, document body font-family will not be overridden."
         ),
     )
@@ -228,8 +231,8 @@ def build_parser(config: dict[str, Any]) -> argparse.ArgumentParser:
         type=Path,
         default=_resolve_path(_nested_get(cfg, "fonts.code_font")),
         help=(
-            "Optional font file path for code blocks. The script reads its family name "
-            "from metadata and scans sibling files in the same directory for variants."
+            "Optional font file path or font family name for code blocks. "
+            "Path and family-name semantics match --font (Linux-only fc-match fallback)."
         ),
     )
     parser.add_argument(

@@ -1,9 +1,10 @@
+import platform
 import shutil
+import subprocess
 import unicodedata
 from pathlib import Path
-from typing import Any
 
-from fontTools.ttLib import TTFont
+from fontTools.ttLib import TTFont  # pyright: ignore[reportMissingImports]
 
 FONT_FORMATS = {
     ".ttf": "truetype",
@@ -90,6 +91,54 @@ def _copy_font_to_assets(
         shutil.copy2(source_path, dest_path)
 
     return f"fonts/{dest_name}"
+
+
+def resolve_font_path(font_input: str | Path) -> Path:
+    candidate = Path(font_input).expanduser()
+    if candidate.is_file():
+        if candidate.suffix.lower() not in FONT_FORMATS:
+            raise ValueError(
+                f"Unsupported font file: {candidate} (.ttf/.otf/.woff/.woff2 only)"
+            )
+        return candidate.resolve()
+
+    return _resolve_via_fontconfig(str(font_input))
+
+
+def _resolve_via_fontconfig(family: str) -> Path:
+    system = platform.system()
+    if system != "Linux":
+        raise NotImplementedError(
+            f"Font family resolution by name is only supported on Linux "
+            f"(current system: {system}). Windows font family resolution is "
+            "not yet implemented — please provide a font file path directly."
+        )
+
+    fc_match = shutil.which("fc-match")
+    if fc_match is None:
+        raise FileNotFoundError(
+            "fc-match tool not found — install fontconfig (e.g. "
+            "'apt install fontconfig' on Debian/Ubuntu, 'dnf install fontconfig' "
+            "on Fedora) to resolve font families by name."
+        )
+
+    result = subprocess.run(
+        [fc_match, r"--format=%{file}\n", family],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    lines = [line.strip() for line in result.stdout.splitlines() if line.strip()]
+    if not lines:
+        raise ValueError(f"fc-match returned no file path for font family: {family!r}")
+
+    resolved = Path(lines[0])
+    if not resolved.is_file():
+        raise FileNotFoundError(
+            f"fc-match returned a non-existent path for font family {family!r}: {resolved}"
+        )
+
+    return resolved
 
 
 def read_font_metadata(font_path: Path) -> tuple[str, int, str, str, list[str]]:

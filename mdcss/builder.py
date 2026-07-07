@@ -1,8 +1,7 @@
 import re
 from pathlib import Path
-from typing import Any
 
-from font import resolve_font_family
+from font import resolve_font_family, resolve_font_path
 from print_style import generate_print_style
 from template import load_template
 
@@ -23,7 +22,8 @@ def build_style_blocks(
     font_family_name = None
     content_font_faces = None
     if font_path is not None:
-        font_family_name, content_font_faces = resolve_font_family(font_path, font_assets_dir)
+        resolved_font_path = resolve_font_path(font_path)
+        font_family_name, content_font_faces = resolve_font_family(resolved_font_path, font_assets_dir)
         blocks.append(content_font_faces)
 
     code_font_family = None
@@ -33,7 +33,8 @@ def build_style_blocks(
 """
     )
     if code_font_path is not None:
-        code_font_family, code_font_faces = resolve_font_family(code_font_path, font_assets_dir)
+        resolved_code_font_path = resolve_font_path(code_font_path)
+        code_font_family, code_font_faces = resolve_font_family(resolved_code_font_path, font_assets_dir)
         if code_font_faces != content_font_faces:
             blocks.append(code_font_faces)
         if font_family_name:
@@ -177,11 +178,11 @@ def write_output(
     header_blocks: list[str] = [],
 ) -> None:
     try:
-        import jsbeautifier
+        import jsbeautifier  # pyright: ignore[reportMissingImports]
     except ImportError:
         jsbeautifier = None
     try:
-        import cssbeautifier
+        import cssbeautifier  # pyright: ignore[reportMissingImports]
     except ImportError:
         cssbeautifier = None
     output_path.mkdir(parents=True, exist_ok=True)
